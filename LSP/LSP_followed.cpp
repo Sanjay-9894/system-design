@@ -2,13 +2,17 @@
 using namespace std;
 #include <vector>
 
-class Account {
+class NonWithdrwableAccount {
 public:
     virtual void deposit(double amount) = 0;
-    virtual void withdraw (double amount) = 0;
 };
 
-class SavingAccount : public Account {
+class WithdrawableAcc : public NonWithdrwableAccount {
+    public:
+    virtual void withdraw(double amount) = 0;
+};
+
+class SavingAccount : public WithdrawableAcc{
 private :
     double balance;
 
@@ -32,7 +36,7 @@ private :
     }
 };
 
-class CurrentAccount : public Account {
+class CurrentAccount : public WithdrawableAcc {
 private:
     double balance;
 
@@ -56,7 +60,7 @@ public:
     }
 };
 
-class FixedTermAccount : public Account{
+class FixedTermAccount : public NonWithdrwableAccount{
 private:
     double balance;
 
@@ -70,42 +74,42 @@ public:
         cout << "Deposited: " << amount << " in Fixed Term Account. New Balance: " << balance << endl;
     }
 
-    void withdraw(double amount) {
-        throw logic_error("Withdrawal not allowed in Fixed Term Account!");
-    }
 };
 
 class BankClient {
    private:
-    vector<Account*> accounts;
+    vector<WithdrawableAcc*> withaccounts;
+    vector<NonWithdrwableAccount*> depaccounts;
 
 public:
-    BankClient(vector<Account*> accounts) { 
-        this->accounts = accounts; 
+    BankClient(vector<WithdrawableAcc*> withaccounts,
+     vector<NonWithdrwableAccount*> depaccounts) { 
+        this->withaccounts = withaccounts;
+        this->depaccounts = depaccounts;
     }
 
-      void processTransactions() {
-        for (Account* acc : accounts) {
-            acc->deposit(1000);  //All accounts allow deposits
-
-            //Assuming all accounts support withdrawal (LSP Violation)
-            try {
-                acc->withdraw(500);
-            } catch (const logic_error& e) {
-                cout << "Exception: " << e.what() << endl;
-            }
+        void processTransactions() {
+        for (WithdrawableAcc* acc : withaccounts) {
+            acc->deposit(1000);
+            acc->withdraw(500); 
+        }
+        for (NonWithdrwableAccount* acc : depaccounts) {
+            acc->deposit(5000);
         }
     }
 };
 
 
-int main(){
-    vector<Account*> accounts;
-    accounts.push_back(new SavingAccount());
-    accounts.push_back(new CurrentAccount());
-    accounts.push_back(new FixedTermAccount());
 
-    BankClient* client = new BankClient(accounts);
+int main(){
+    vector<WithdrawableAcc*> withdrawableAccounts;
+    withdrawableAccounts.push_back(new SavingAccount());
+    withdrawableAccounts.push_back(new CurrentAccount());
+
+    vector<NonWithdrwableAccount*> depositOnlyAccounts;
+    depositOnlyAccounts.push_back(new FixedTermAccount());
+
+      BankClient* client = new BankClient (withdrawableAccounts, depositOnlyAccounts);
     client->processTransactions();
 
     return 0;
